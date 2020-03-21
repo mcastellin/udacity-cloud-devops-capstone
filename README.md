@@ -39,3 +39,4 @@ Other services will be utilized too
 - after deployment and before switching load balancer, the new instance should pass smoke testing (automated) 
 - I want the application api to be browsable with swagger 
 
+- [ ] Create Ansible playbook to install Jenkins into an ubuntu Linux machine
