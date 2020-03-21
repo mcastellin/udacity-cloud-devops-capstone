@@ -1,9 +1,26 @@
 # udacity-cloud-devops-capstone
 A repository that will contain the Udacity Cloud DevOps capstone project
 
+## The Application
 
-## Purpose
-Implement a pipeline to deploy a microservice in a Kubernetes cluster hosted in an AWS account.
+For this project I want to operationalise a simple integration flow. 
+- an api receives data from users and drops the data into an AWS SQS
+- another backend app has the job to dequeue the requests from SQS, process them and put the results into a MongoDB database
+- the frontend app can read some stats from MongoDB and display them in a webpage to web users
+
+The application is composed of two microservices:
+- A frontend microservice to receive requests and display the statistics page
+- A batch microservice to pull the requests from SQS and process them and update statistics into the database
+
+Other services will be utilized too
+- Amazon SQS
+- Amazon hosted MongoDB database
+
+### Application requirements
+- the application should be deployed for high availability
+- it should use the minimum amount of resources to handle the amount of requests
+- web application should handle the load by scaling horizontally
+- backend application should be able to scale down to 1 running instance and scale up
 
 ## Project tasks
 
@@ -20,4 +37,5 @@ Implement a pipeline to deploy a microservice in a Kubernetes cluster hosted in 
 - new container should be tagged with the git hash
 - at pipeline completion a new deployment should deploy in a blue/green fashion
 - after deployment and before switching load balancer, the new instance should pass smoke testing (automated) 
--
+- I want the application api to be browsable with swagger 
+
