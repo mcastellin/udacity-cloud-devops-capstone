@@ -40,4 +40,5 @@ Other services will be utilized too
 - I want the application api to be browsable with swagger 
 
 ## TODOs
-- [ ] Create Ansible playbook to install Jenkins into an ubuntu Linux machine
+- [x] Create Ansible playbook to install Jenkins into an ubuntu Linux machine
+- [ ] Create cloudformation script to initialise all Amazon resources to deploy our Kubernetes cluster and Jenkins
