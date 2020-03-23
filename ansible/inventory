@@ -1,5 +1,2 @@
-localhost ansible_ssh_user=root ansible_ssh_port=32769
-
-# These are additional hosts and configuration we could use
-# 192.168.0.11 ansible_ssh_user=ubuntu ansible_ssh_port=22
-
+# Inventory file for instances to be configured by ansible
+capstone_jenkins_ec2 ansible_ssh_user=ec2-user
