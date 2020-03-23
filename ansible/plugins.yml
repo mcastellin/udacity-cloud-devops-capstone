@@ -1,0 +1,21 @@
+---
+
+- name: Install package
+  hosts: all
+  tasks:
+
+    - name: install Jenkins plugins
+      jenkins_plugin:
+        name: "{{ item }}"
+        url_username: "{{ jenkins_user }}"
+        url_password: "{{ jenkins_password }}"
+        state: latest
+      with_items:
+        - blueocean
+        - pipeline-aws
+
+    - name: restart Jenkins after plugin installation
+      become: yes
+      service:
+        name: jenkins
+        state: restarted

@@ -26,11 +26,6 @@
           - jenkins
         state: present
 
-#   - name: install Jenkins plugins
-#     jenkins_plugin:
-#       name: blueocean
-#       state: latest
-
     - name: enable Jenkins service
       become: yes
       service:
