@@ -1,0 +1,10 @@
+[
+        {
+                "ParameterKey": "EnvironmentName",
+                "ParameterValue": "Capstone" 
+        },
+        {
+                "ParameterKey": "KeyPairName",
+                "ParameterValue": "mcastellin"
+        }
+]
