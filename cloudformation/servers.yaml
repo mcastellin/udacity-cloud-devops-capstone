@@ -11,13 +11,13 @@ Parameters:
     Description: The KeyPair name to use for ssh access to instances
     Type: String
 
-Resrouces:
+Resources:
 
   EC2AdmSecGroup:
-    Type: AWS::EC2::SecurityGrouo
+    Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Allow access to EC2 instances for administrative purposes
-      VPCId:
+      VpcId:
         Fn::ImportValue:
           !Sub "${EnvironmentName}-VPCID"
       SecurityGroupIngress:
@@ -53,4 +53,4 @@ Resrouces:
             VolumeSize: '10'
       NetworkInterfaces:
         - NetworkInterfaceId: !Ref K8sMasterControlInterface
-          DeviceIndec: 0
+          DeviceIndex: 0
