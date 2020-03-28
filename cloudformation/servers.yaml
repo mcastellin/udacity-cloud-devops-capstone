@@ -33,17 +33,17 @@ Resources:
       SubnetId: 
         Fn::ImportValue: !Sub "${EnvironmentName}-PUB1-SN"
       GroupSet:
-      - Ref: EC2AdmSecGroup
+        - Ref: EC2AdmSecGroup
 
   K8sMasterInstance:
     Type: AWS::EC2::Instance
     Description: An EC2 instance to hold the Kubernetes master node
     Properties:
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          echo "Applying updates..."
-          apt-get update && apt-get upgrade -y
+#     UserData:
+#       Fn::Base64: !Sub |
+#         #!/bin/bash
+#         echo "Applying updates..."
+#         echo "Done."
       ImageId: ami-0b418580298265d5c
       KeyName: !Ref KeyPairName
       InstanceType: t3.small
@@ -54,3 +54,9 @@ Resources:
       NetworkInterfaces:
         - NetworkInterfaceId: !Ref K8sMasterControlInterface
           DeviceIndex: 0
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-k8s-master"
+
+
+

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-valid_stack_statuses="UPDATE_COMPLETE CREATE_COMPLETE ROLLBACK_COMPLETE"
+valid_stack_statuses="UPDATE_COMPLETE CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE"
 function stack_op() {
     result=$(aws cloudformation list-stacks --stack-status-filter $valid_stack_statuses | jq -r ".StackSummaries[].StackName" | grep -e "^$1\$")
 
