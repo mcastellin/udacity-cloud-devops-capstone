@@ -11,6 +11,11 @@ Parameters:
     Description: The KeyPair name to use for ssh access to instances
     Type: String
 
+  Minions:
+    Description: The amount of minion nodes for the K8s cluster
+    Type: Number
+    Default: 2
+
 Resources:
 
   EC2AdmSecGroup:
@@ -26,6 +31,56 @@ Resources:
           ToPort: 22
           CidrIp: 0.0.0.0/0
 
+  MinionSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for cluster nodes
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+
+  MasterSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for cluster master
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+
+  APIPort:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecGroup
+      IpProtocol: tcp
+      FromPort: 6443
+      ToPort: 6443
+      CidrIp: 0.0.0.0/0
+
+  DiscoveryPort:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecGroup
+      IpProtocol: tcp
+      FromPort: 9898
+      ToPort: 9898
+      SourceSecurityGroupId: !Ref MinionSecGroup
+
+  MasterEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  MasterEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt MasterEIP.AllocationId
+      NetworkInterfaceId: !Ref K8sMasterControlInterface
+
   K8sMasterControlInterface:
     Type: AWS::EC2::NetworkInterface
     Properties:
@@ -34,36 +89,38 @@ Resources:
         Fn::ImportValue: !Sub "${EnvironmentName}-PUB1-SN"
       GroupSet:
         - Ref: EC2AdmSecGroup
+        - Ref: MasterSecGroup
 
-  K8sMasterInstance:
+  K8sMaster:
+    DependsOn: KubernetesToken
     Type: AWS::EC2::Instance
     Description: An EC2 instance to hold the Kubernetes master node
     Properties:
       UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          echo "Installing kubernetes master..."
-          apt-get update && apt-get install -y apt-transport-https curl
-          curl -fsSL https://get.docker.com -o get-docker.sh
-          sh get-docker.sh
-          usermod -aG docker ubuntu
-          curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-          
-          cat <<EOF | tee /etc/apt/sources.list.d/kubernetes.list
-          deb https://apt.kubernetes.io/ kubernetes-xenial main
-          EOF
-          apt-get update
-          apt-get install -y kubelet kubeadm kubectl
-          apt-mark hold kubectl kubeadm kubectl
+        Fn::Base64: 
+          Fn::Join:
+            - |+
 
-          echo "Initializing Kubernetes..."
-          kubeadm config images pull
-          kubeadm init
-
-          mkdir -p /home/ubuntu/.kube
-          cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
-          chown ubuntu:ubuntu home/ubuntu/.kube/config
-          echo "Done."
+            - - '#!/bin/bash -ex'
+              - !Join
+                - ' '
+                - - /usr/local/bin/cfn-init
+                  - '--verbose'
+                  - '--stack'
+                  - !Ref AWS::StackName
+                  - '--region'
+                  - !Ref AWS::Region
+                  - '--resource'
+                  - K8sMaster
+              - !Join
+                - ' '
+                - - /usr/local/bin/cfn-signal
+                  - '--stack'
+                  - !Ref AWS::StackName
+                  - '--region'
+                  - !Ref AWS::Region
+                  - '--resource'
+                  - K8sMaster
       ImageId: ami-0b418580298265d5c
       KeyName: !Ref KeyPairName
       InstanceType: t3.small
@@ -77,6 +134,159 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${EnvironmentName}-k8s-master"
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          commands:
+            0-install:
+              command: !Join
+                - ' '
+                - - 'curl'
+                  - 'https://raw.githubusercontent.com/mcastellin/udacity-cloud-devops-capstone/master/cloudformation/install-k8s.sh'
+                  - '| sh -'
+            1-init:
+              command: !Join
+                - ''
+                - - kubeadm init --token="
+                  - !GetAtt KubernetesToken.Token
+                  - >-
+                    "
 
 
+# K8sMinionsLaunchConfiguration:
+#   DependsOn: K8sMaster
+#   Type: AWS::AutoScaling::LaunchConfiguration
+#   Properties:
+#     UserData:
+#       Fn::Base64: 
+#         Fn::Join:
+#           - |+
+
+#           - - '#!/bin/bash -ex'
+#             - !Join
+#               - ' '
+#               - - /usr/local/bin/cfn-init
+#                 - '--verbose'
+#                 - '--stack'
+#                 - !Ref AWS::StackName
+#                 - '--region'
+#                 - !Ref AWS::Region
+#                 - '--resource'
+#                 - K8sMinionsLaunchConfiguration
+#             - !Join
+#               - ' '
+#               - - /usr/local/bin/cfn-signal
+#                 - '--stack'
+#                 - !Ref AWS::StackName
+#                 - '--region'
+#                 - !Ref AWS::Region
+#                 - '--resource'
+#                 - K8sMinionsLaunchConfiguration
+#     ImageId: ami-0b418580298265d5c
+#     InstanceType: t3.small
+#     KeyName: !Ref KeyPairName
+#     SecurityGroups:
+#       - !Ref MinionSecGroup
+#       - !Ref EC2AdmSecGroup
+#     BlockDeviceMappings:
+#       - DeviceName: "/dev/sdk"
+#         Ebs:
+#           VolumeSize: '10'
+#   Metadata:
+#     AWS::CloudFormation::Init:
+#       config:
+#         commands:
+#           0-install:
+#             command: !Join
+#               - ' '
+#               - - 'curl'
+#                 - 'https://raw.githubusercontent.com/mcastellin/udacity-cloud-devops-capstone/master/cloudformation/install-k8s.sh'
+#                 - '| sh -'
+#           1-join:
+#             command: !Join
+#               - ''
+#               - - kubeadm join --token="
+#                 - !GetAtt KubernetesToken.Token
+#                 - >-
+#                   " 
+#                 - !Join 
+#                   - ''
+#                   - - !GetAtt 
+#                       - K8sMaster
+#                       - PrivateIp
+#                     - ':6443' 
+
+# K8sMinionsAutoScalingGroup:
+#   DependsOn: K8sMinionsLaunchConfiguration
+#   Type: AWS::AutoScaling::AutoScalingGroup
+#   Properties:
+#     VPCZoneIdentifier:
+#       - Fn::ImportValue:
+#          !Sub "${EnvironmentName}-PRI-NETS"
+#     LaunchConfigurationName: !Ref K8sMinionsLaunchConfiguration
+#     MinSize: 1
+#     MaxSize: !Ref Minions
+#     DesiredCapacity: !Ref Minions
+#     Tags:
+#       - Key: Name
+#         Value: !Join
+#           - ''
+#           - - 'Minion - '
+#             - !Ref AWS::StackName
+#         PropagateAtLaunch: true
+
+  LambdaExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Principal:
+            Service: ["lambda.amazonaws.com"]
+          Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+      - PolicyName: "lambda_policy"
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Effect: "Allow"
+            Action:
+            - "logs:CreateLogGroup"
+            - "logs:CreateLogStream"
+            - "logs:PutLogEvents"
+            Resource: "arn:aws:logs:*:*:*"
+
+  GenerateToken:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Code:
+        ZipFile: |
+          'use strict';
+          const crypto = require('crypto');
+          const response = require('cfn-response');
+          exports.handler = (event, context, callback) => {
+              function tokenGenerator (len) {
+                  return crypto.randomBytes(Math.ceil(len/2)).toString('hex').slice(0,len);
+              }
+              var token = tokenGenerator(6) + '.' + tokenGenerator(16)
+              var responseData = {Token: token}
+              return response.send(event, context, response.SUCCESS, responseData);
+          };
+      Handler: "index.handler"
+      Runtime: "nodejs12.x"
+      Timeout: 10
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  KubernetesToken:
+    Type: "Custom::GenerateToken"
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt GenerateToken.Arn 
+
+Outputs:
+  GeneratedToken:
+    Description: The Kubernetes token to join the cluster
+    Value: !Sub "${KubernetesToken.Token}"
 
