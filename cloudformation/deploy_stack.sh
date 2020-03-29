@@ -21,6 +21,7 @@ function deploy_stack() {
         --parameters file://$3 \
         | jq
 
+    echo "Waiting for stack $1 to deploy..."
     aws cloudformation wait stack-$operation-complete --stack-name $1
 }
 
