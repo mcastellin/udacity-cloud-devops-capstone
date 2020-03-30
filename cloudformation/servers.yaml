@@ -14,7 +14,7 @@ Parameters:
   Minions:
     Description: The amount of minion nodes for the K8s cluster
     Type: Number
-    Default: 2
+    Default: 1
 
 Resources:
 
@@ -75,12 +75,6 @@ Resources:
     Properties:
       Domain: vpc
 
-  MasterEIPAssociation:
-    Type: AWS::EC2::EIPAssociation
-    Properties:
-      AllocationId: !GetAtt MasterEIP.AllocationId
-      NetworkInterfaceId: !Ref K8sMasterControlInterface
-
   K8sMasterControlInterface:
     Type: AWS::EC2::NetworkInterface
     Properties:
@@ -90,6 +84,12 @@ Resources:
       GroupSet:
         - Ref: EC2AdmSecGroup
         - Ref: MasterSecGroup
+
+  MasterEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt MasterEIP.AllocationId
+      NetworkInterfaceId: !Ref K8sMasterControlInterface
 
   K8sMaster:
     DependsOn: KubernetesToken
@@ -104,23 +104,19 @@ Resources:
             - - '#!/bin/bash -ex'
               - !Join
                 - ' '
-                - - /usr/local/bin/cfn-init
-                  - '--verbose'
-                  - '--stack'
-                  - !Ref AWS::StackName
-                  - '--region'
-                  - !Ref AWS::Region
-                  - '--resource'
-                  - K8sMaster
+                - - 'curl'
+                  - 'https://raw.githubusercontent.com/mcastellin/udacity-cloud-devops-capstone/master/cloudformation/install-k8s.sh'
+                  - '| sh -'
               - !Join
-                - ' '
-                - - /usr/local/bin/cfn-signal
-                  - '--stack'
-                  - !Ref AWS::StackName
-                  - '--region'
-                  - !Ref AWS::Region
-                  - '--resource'
-                  - K8sMaster
+                - ''
+                - - kubeadm init --token="
+                  - !GetAtt KubernetesToken.Token
+                  - >-
+                    "
+              - 'kubectl apply --kubeconfig /etc/kubernetes/admin.conf --namespace kube-system -f https://docs.projectcalico.org/manifests/calico.yaml'
+              - 'mkdir -p /home/ubuntu/.kube'
+              - 'cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config'
+              - 'chown ubuntu:ubuntu /home/ubuntu/.kube/config'
       ImageId: ami-0b418580298265d5c
       KeyName: !Ref KeyPairName
       InstanceType: t3.small
@@ -134,106 +130,67 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${EnvironmentName}-k8s-master"
-    Metadata:
-      AWS::CloudFormation::Init:
-        config:
-          commands:
-            0-install:
-              command: !Join
+
+  K8sMinionsLaunchConfiguration:
+    DependsOn: K8sMaster
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      UserData:
+        Fn::Base64: 
+          Fn::Join:
+            - |+
+
+            - - '#!/bin/bash -ex'
+              - !Join
                 - ' '
                 - - 'curl'
                   - 'https://raw.githubusercontent.com/mcastellin/udacity-cloud-devops-capstone/master/cloudformation/install-k8s.sh'
                   - '| sh -'
-            1-init:
-              command: !Join
+              - !Join
                 - ''
-                - - kubeadm init --token="
+                - - kubeadm join --token="
                   - !GetAtt KubernetesToken.Token
                   - >-
-                    "
+                    " 
+                  - !Join 
+                    - ''
+                    - - !GetAtt 
+                        - K8sMaster
+                        - PrivateIp
+                      - ':6443' 
+                  - ' --discovery-token-unsafe-skip-ca-verification'
+              - 'mkdir -p /home/ubuntu/.kube'
+              - 'cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config'
+              - 'chown ubuntu:ubuntu /home/ubuntu/.kube/config'
+      ImageId: ami-0b418580298265d5c
+      InstanceType: t3.small
+      KeyName: !Ref KeyPairName
+      SecurityGroups:
+        - !Ref MinionSecGroup
+        - !Ref EC2AdmSecGroup
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sdk"
+          Ebs:
+            VolumeSize: '10'
 
-
-# K8sMinionsLaunchConfiguration:
-#   DependsOn: K8sMaster
-#   Type: AWS::AutoScaling::LaunchConfiguration
-#   Properties:
-#     UserData:
-#       Fn::Base64: 
-#         Fn::Join:
-#           - |+
-
-#           - - '#!/bin/bash -ex'
-#             - !Join
-#               - ' '
-#               - - /usr/local/bin/cfn-init
-#                 - '--verbose'
-#                 - '--stack'
-#                 - !Ref AWS::StackName
-#                 - '--region'
-#                 - !Ref AWS::Region
-#                 - '--resource'
-#                 - K8sMinionsLaunchConfiguration
-#             - !Join
-#               - ' '
-#               - - /usr/local/bin/cfn-signal
-#                 - '--stack'
-#                 - !Ref AWS::StackName
-#                 - '--region'
-#                 - !Ref AWS::Region
-#                 - '--resource'
-#                 - K8sMinionsLaunchConfiguration
-#     ImageId: ami-0b418580298265d5c
-#     InstanceType: t3.small
-#     KeyName: !Ref KeyPairName
-#     SecurityGroups:
-#       - !Ref MinionSecGroup
-#       - !Ref EC2AdmSecGroup
-#     BlockDeviceMappings:
-#       - DeviceName: "/dev/sdk"
-#         Ebs:
-#           VolumeSize: '10'
-#   Metadata:
-#     AWS::CloudFormation::Init:
-#       config:
-#         commands:
-#           0-install:
-#             command: !Join
-#               - ' '
-#               - - 'curl'
-#                 - 'https://raw.githubusercontent.com/mcastellin/udacity-cloud-devops-capstone/master/cloudformation/install-k8s.sh'
-#                 - '| sh -'
-#           1-join:
-#             command: !Join
-#               - ''
-#               - - kubeadm join --token="
-#                 - !GetAtt KubernetesToken.Token
-#                 - >-
-#                   " 
-#                 - !Join 
-#                   - ''
-#                   - - !GetAtt 
-#                       - K8sMaster
-#                       - PrivateIp
-#                     - ':6443' 
-
-# K8sMinionsAutoScalingGroup:
-#   DependsOn: K8sMinionsLaunchConfiguration
-#   Type: AWS::AutoScaling::AutoScalingGroup
-#   Properties:
-#     VPCZoneIdentifier:
-#       - Fn::ImportValue:
-#          !Sub "${EnvironmentName}-PRI-NETS"
-#     LaunchConfigurationName: !Ref K8sMinionsLaunchConfiguration
-#     MinSize: 1
-#     MaxSize: !Ref Minions
-#     DesiredCapacity: !Ref Minions
-#     Tags:
-#       - Key: Name
-#         Value: !Join
-#           - ''
-#           - - 'Minion - '
-#             - !Ref AWS::StackName
-#         PropagateAtLaunch: true
+  K8sMinionsAutoScalingGroup:
+    DependsOn: K8sMinionsLaunchConfiguration
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - Fn::ImportValue:
+           !Sub "${EnvironmentName}-PRI-NETS"
+      LaunchConfigurationName: !Ref K8sMinionsLaunchConfiguration
+      MinSize: 1
+      MaxSize: !Ref Minions
+      DesiredCapacity: !Ref Minions
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ''
+            - - 'Minion - '
+              - !Ref AWS::StackName
+          PropagateAtLaunch: true
 
   LambdaExecutionRole:
     Type: "AWS::IAM::Role"
