@@ -10,13 +10,13 @@ install:
 
 lint:
 	# Run linting on all python files
-	@source ~/.capstone/bin/activate &&\
+	@. ~/.capstone/bin/activate &&\
 		pylint --disable=R,C api/*.py
 
 run-dev:
 	# Runs the python api main file
 	# Useful for development
-	@source ~/.capstone/bin/activate &&\
+	@. ~/.capstone/bin/activate &&\
 		python api/app.py
 
 all: install lint

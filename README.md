@@ -82,5 +82,5 @@ From Jenkins BlueOcean follow these steps to configure a new multi-branch pipeli
 - under *Webhooks* select *Add webhook*
 - specify your Jenkins server URL like for instance `http://54.189.23.46:8080/github-webhook/`
 - specify a content-type and secret (optional)
-- select the *send me everything* to support push events for pull requests too and create the webhook
+- select the *Just the push event* and create the webhook
 
