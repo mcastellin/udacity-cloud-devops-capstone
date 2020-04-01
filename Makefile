@@ -4,7 +4,7 @@ setup:
 
 install:
 	# Upgrades pip and install all requirements
-	source ~/.capstone/bin/activate &&\
+	@. ~/.capstone/bin/activate &&\
 		pip install --upgrade pip &&\
 		pip install -r requirements.txt
 
