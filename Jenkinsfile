@@ -5,7 +5,9 @@ pipeline {
 
     stages {
         stage('Lint') {
-            sh 'make setup install lint'
+            steps {
+                sh 'make setup install lint'
+            }
         }
     }
 }
