@@ -1,2 +1,0 @@
-# Inventory file for instances to be configured by ansible
-capstone_jenkins_ec2 ansible_ssh_user=ec2-user

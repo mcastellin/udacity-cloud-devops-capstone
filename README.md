@@ -42,7 +42,8 @@ The API interface will be browsable with swagger.
 You can deploy a Jenkins CI server on AWS with the cloudformation deployment script provided
 
 ```
-cloudformation/deploy_stack.sh jenkins cloudformation/jenkins-w-vpc.yaml cloudformation/jenkins-params.json
+cd cloudformation/
+./deploy_stack.sh jenkins jenkins-w-vpc.yaml jenkins-params.json
 ```
 
 Once the script is successful you can check in AWS Cloudformation console the Outpus section of the stack. There you can find some useful links to:
@@ -60,6 +61,10 @@ An Ansible playbook is provided to install additional plugins to the Jenkins ins
 From command line run the Ansible playbook
 
 ```
-ansible-playbook --key-file=~/.ssh/pipeline.pem -u ubuntu -i "<jenkins_ip>," -e jenkins_user=<username> -e jenkins_password=<secret> plugins.yml
+cd ansible/
+ansible-playbook --key-file=~/.ssh/pipeline.pem -u ubuntu \
+    -i "<jenkins_ip>," \
+    -e jenkins_user=<username> -e jenkins_password=<secret> \
+    jenkins/install_plugins.yml
 ```
 
