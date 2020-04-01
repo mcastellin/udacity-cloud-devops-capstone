@@ -14,6 +14,10 @@ Parameters:
   PublicSubnet1CIDR:
     Description: The IP range (CIDR notation) for this Subnet
     Type: String
+    
+  KeyPairName:
+    Description: The name of the key pair used to access Jenkins via SSH
+    Type: String
 
 Resources:
   VPC:
@@ -83,6 +87,79 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet1
 
+  EC2AdmSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow access to EC2 instances for administrative purposes
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+    
+  JenkinsSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Http access to Jenkins automation server
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+          
+  JenkinsControlInterface:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      Description: A network interface for administraction traffic to k8s instances
+      SubnetId: !Ref PublicSubnet1 
+      GroupSet:
+        - Ref: EC2AdmSecGroup
+        - Ref: JenkinsSecGroup
+
+  JenkinsEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  JenkinsEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt JenkinsEIP.AllocationId
+      NetworkInterfaceId: !Ref JenkinsControlInterface
+
+  Jenkins:
+    Type: AWS::EC2::Instance
+    Description: An EC2 instance with a JenkinsCI master
+    Properties:
+      UserData:
+        Fn::Base64: 
+          Fn::Join:
+            - |+
+
+            - - '#!/bin/bash -ex'
+              - apt update && apt install default-jdk git -y
+              - curl -fsSL https://get.docker.com -o get-docker.sh
+              - sh get-docker.sh
+              - usermod -aG docker ubuntu
+              - wget -q -O - https://pkg.jenkins.io/debian/jenkins.io.key | apt-key add -
+              - sh -c 'echo deb http://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
+              - apt update && apt install jenkins -y
+      ImageId: ami-0d1cd67c26f5fca19
+      KeyName: !Ref KeyPairName
+      InstanceType: t2.micro
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            VolumeSize: '20'
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref JenkinsControlInterface
+          DeviceIndex: 0
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Jenkins"
+
 Outputs: 
   VPC: 
     Description: A reference to the created VPC
@@ -102,3 +179,37 @@ Outputs:
     Export:
       Name: !Sub ${EnvironmentName}-PUB1-SN
 
+  JenkinsConnectionString:
+    Description: The connection string to ssh into the Jenkins instance
+    Value: !Join
+      - ''
+      - - 'ssh -i ~/.ssh/pipeline.pem ubuntu@'
+        - !GetAtt 
+            - Jenkins
+            - PublicIp
+    Export:
+      Name: !Sub ${EnvironmentName}-SSH-Connstring
+
+  JenkinsInitialAdminPassword:
+    Description: A command to get the initial admin password for Jenkins
+    Value: !Join
+      - ''
+      - - 'ssh -i ~/.ssh/pipeline.pem ubuntu@'
+        - !GetAtt 
+            - Jenkins
+            - PublicIp
+        - ' "sudo cat /var/lib/jenkins/secrets/initialAdminPassword"'
+    Export:
+      Name: !Sub ${EnvironmentName}-InitPassword
+
+  JenkinsURL:
+    Description: The URL to connect to JenkinsCI console
+    Value: !Join
+      - ''
+      - - 'http://'
+        - !GetAtt 
+            - Jenkins
+            - PublicIp
+        - ':8080/'
+    Export:
+      Name: !Sub ${EnvironmentName}-URL
