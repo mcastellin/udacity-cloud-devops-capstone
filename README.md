@@ -72,4 +72,15 @@ ansible-playbook --key-file=~/.ssh/pipeline.pem -u ubuntu \
 
 From Jenkins BlueOcean follow these steps to configure a new multi-branch pipeline with web-hooks
 
-//TODO: describe how I did it
+- from BlueOcean Jenkins page, click the **Create Pipeline** button
+- select Github and create the access token as instructed
+- select your repository and confirm
+
+#### Adding webhook to push events from GitHub
+
+- navigate the *Settings* menu for your GitHub repository
+- under *Webhooks* select *Add webhook*
+- specify your Jenkins server URL like for instance `http://54.189.23.46:8080/github-webhook/`
+- specify a content-type and secret (optional)
+- select the *send me everything* to support push events for pull requests too and create the webhook
+
