@@ -68,3 +68,8 @@ ansible-playbook --key-file=~/.ssh/pipeline.pem -u ubuntu \
     jenkins/install_plugins.yml
 ```
 
+### Configure pipeline for the project
+
+From Jenkins BlueOcean follow these steps to configure a new multi-branch pipeline with web-hooks
+
+//TODO: describe how I did it
