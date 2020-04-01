@@ -29,7 +29,7 @@ The API interface will be browsable with swagger.
 
 ## TODOs
 - [x] Create Ansible playbook to install Jenkins into an ubuntu Linux machine
-- [ ] Create cloudformation script to initialise all Amazon resources to deploy our Kubernetes cluster and Jenkins
+- [x] Create cloudformation script to initialise all Amazon resources to deploy our Kubernetes cluster and Jenkins
 
 
 # Requirements Installation
