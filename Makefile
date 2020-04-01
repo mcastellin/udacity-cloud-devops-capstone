@@ -9,7 +9,7 @@ install:
 		pip install -r requirements.txt
 
 lint:
-	# Run linting on all python files in application
+	# Run linting on all python files
 	@source ~/.capstone/bin/activate &&\
 		pylint --disable=R,C api/*.py
 
