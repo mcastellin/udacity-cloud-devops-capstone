@@ -146,6 +146,7 @@ Resources:
               - wget -q -O - https://pkg.jenkins.io/debian/jenkins.io.key | apt-key add -
               - sh -c 'echo deb http://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
               - apt update && apt install jenkins -y
+              - usermod -aG docker jenkins
       ImageId: ami-0d1cd67c26f5fca19
       KeyName: !Ref KeyPairName
       InstanceType: t2.micro

@@ -4,6 +4,19 @@
   hosts: all
   tasks:
 
+    - name: install Hadolint
+      become: yes
+      get_url:
+        url: https://github.com/hadolint/hadolint/releases/download/v1.17.5/hadolint-Linux-x86_64
+        dest: /bin/hadolint
+
+    - name: Hadolint permissions
+      become: yes
+      file:
+        path: /bin/hadolint
+        state: touch
+        mode: u=rwx,g=rx,o=rx
+        
     - name: install Jenkins plugins
       jenkins_plugin:
         name: "{{ item }}"
@@ -13,6 +26,7 @@
       with_items:
         - blueocean
         - pipeline-aws
+        - role-strategy
 
     - name: restart Jenkins after plugin installation
       become: yes
