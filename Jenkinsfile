@@ -1,5 +1,11 @@
 pipeline {
     agent any
+    environment {
+        apiImage = null
+        apiImageName = 'mcastellin/udacity-capstone-api'
+        dockerCredentialsId = 'jenkins_capstone-dockerhub'
+        shortCommit = env.GIT_COMMIT.take(7)
+    }
     stages {
         stage('Application Lint and Test') {
             agent {
@@ -14,6 +20,7 @@ pipeline {
                 sh 'make test'
             }
         }
+
         stage('Docker Lint') {
             steps {
                 sh 'hadolint **/Dockerfile'
@@ -23,10 +30,40 @@ pipeline {
         stage('Container build') {
             steps {
                 script {
-                    def capstoneImage = docker.build("mcastellin/udacity-capstone:${env.BUILD_ID}", "api")
-                    /*customImage.push()*/
-                    /*customImage.push('latest')*/
+                    apiImage = docker.build("${apiImageName}:${shortCommit}", "api")
                 } 
+            }
+        }
+
+        stage('Integration testing') {
+            when { branch "master" }
+            steps {
+                script {
+                    def port = 8888
+                    apiImage.withRun("-p ${port}:80") {
+                        sleep 10
+                        sh "curl -v http://localhost:${port}/"
+                    }
+                }
+            }
+        }
+
+        stage('Push container') {
+            when { branch "master" }
+            steps {
+                script {
+                    docker.withRegistry('https://registry-1.docker.io/', dockerCredentialsId) {
+                        apiImage.push('latest')
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        cleanup {
+            script {
+                sh "docker rmi ${apiImageName}:${shortCommit} || true"
             }
         }
     }
