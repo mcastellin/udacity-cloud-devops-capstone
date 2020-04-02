@@ -6,12 +6,16 @@ install:
 	# Upgrades pip and install all requirements
 	@. ~/.capstone/bin/activate &&\
 		pip install --upgrade pip &&\
-		pip install -r requirements.txt
+		pip install -r api/requirements.txt
 
 lint:
 	# Run linting on all python files
 	@. ~/.capstone/bin/activate &&\
 		pylint --disable=R,C api/*.py
+
+test:
+	# Testing python application
+	echo "good"
 
 run-dev:
 	# Runs the python api main file
