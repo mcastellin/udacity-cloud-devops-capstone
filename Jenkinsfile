@@ -1,10 +1,12 @@
 pipeline {
     agent any
     environment {
+        shortCommit = env.GIT_COMMIT.take(7)
         apiImage = null
         apiImageName = 'mcastellin/udacity-capstone-api'
         dockerCredentialsId = 'jenkins_capstone-dockerhub'
-        shortCommit = env.GIT_COMMIT.take(7)
+        kubectlCredentialsId = 'jenkins_capstone-kubectl'
+        k8sAPIServerId = 'jenkins_capstone-k8s-api'
     }
     stages {
         stage('Application Lint and Test') {
@@ -54,6 +56,22 @@ pipeline {
                 script {
                     docker.withRegistry('https://registry-1.docker.io/', dockerCredentialsId) {
                         apiImage.push('latest')
+                    }
+                }
+            }
+        }
+
+        stage('Update cluster') {
+            when { branch "master" }
+            steps {
+                script {
+                    withCredentials([string(credentialsId: k8sAPIServerId, variable: 'k8sAPIServer')]) {
+                        withKubeConfig([
+                            credentialsId: $kubectlCredentialsId,
+                            serverUrl: k8sAPIServer
+                        ]) {
+                            sh 'kubectl apply -f k8s/api.yaml -n default'
+                        }
                     }
                 }
             }
