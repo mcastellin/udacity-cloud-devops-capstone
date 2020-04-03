@@ -7,6 +7,11 @@ pipeline {
         dockerCredentialsId = 'jenkins_capstone-dockerhub'
         kubectlCredentialsId = 'jenkins_capstone-kubectl'
         k8sAPIServerId = 'jenkins_capstone-k8s-api'
+        publicDNSNameCredentialsId = 'jenkins_capstone-public-dns'
+        publicDNSName = null
+        candidate = null
+        nextCandidate = null
+        k8sAPIServer = null
     }
     stages {
         stage('Application Lint and Test') {
@@ -65,13 +70,67 @@ pipeline {
             when { branch "master" }
             steps {
                 script {
-                    withCredentials([string(credentialsId: k8sAPIServerId, variable: 'k8sAPIServer')]) {
+                    withCredentials([string(credentialsId: k8sAPIServerId, variable: 'k8sAPIServerVar'),
+                    string(credentialsId: publicDNSNameCredentialsId, variable: 'publicDNSNameVar')]) {
+                        // Storing variables at a global level
+                        k8sAPIServer = k8sAPIServerVar
+                        publicDNSName = publicDNSNameVar
+
                         withKubeConfig([
-                            credentialsId: $kubectlCredentialsId,
+                            credentialsId: kubectlCredentialsId,
                             serverUrl: k8sAPIServer
                         ]) {
-                            sh 'kubectl apply -f k8s/api.yaml -n default'
+                            candidate = sh(returnStdout: true, 
+                                script: 'kubectl get service capstone-api-svc -o go-template --template \'{{.spec.selector.release}}{{"\\n"}}\'')
+                                .trim()
+
+                            nextCandidate = candidate == "blue" ? "green" : "blue"
+
+                            echo "Next release is ${nextCandidate}"
+
+                            sh "kubectl apply -f k8s/${nextCandidate}-deployment.yaml"
+
+                            def status = null
+                            def remaining = 5
+                            while(remaining > 0 && status != "200") {
+                               sleep 10
+                               status = sh(returnStdout: true,
+                                    script: "curl -w \"%{http_code}\" -s -o /dev/null ${publicDNSName}/${nextCandidate}/api")
+                                    .trim()
+                            }
+                            if(status != "200") {
+                                error("Deployment failed to respond with successful code 200, got $status instead.")
+                            }
                         }
+                    }
+                }
+            }
+        }
+        
+        stage('Smoke tests') {
+            when { branch "master" }
+            steps {
+                script {
+                    withKubeConfig([
+                        credentialsId: kubectlCredentialsId,
+                        serverUrl: k8sAPIServer
+                    ]) {
+                        echo "TODO: smoke testing"
+                    }
+                }
+            }
+        }
+
+        stage('Promote release') {
+            when { branch "master" }
+            steps {
+                script {
+                    withKubeConfig([
+                        credentialsId: kubectlCredentialsId,
+                        serverUrl: k8sAPIServer
+                    ]) {
+                        sh "kubectl set selector service/capstone-api-svc release=${nextCandidate},app=capstone-api -n default" 
+                        sh "kubectl delete deployment ${candidate}-capstone-api -n default || true"
                     }
                 }
             }
@@ -79,6 +138,26 @@ pipeline {
     }
 
     post {
+        failure {
+            script {
+                withKubeConfig([
+                    credentialsId: kubectlCredentialsId,
+                    serverUrl: k8sAPIServer
+                ]) {
+                    /*
+                        If a current release candidate has been identified, rolling back the published release to the existing candidate.
+                    */
+                    if(candidate != null) {
+                        sh "kubectl set selector service/capstone-api-svc release=${candidate},app=capstone-api -n default" 
+                    }
+                }
+            }
+        }
+
+        success {
+            echo "tag the image as latest"
+        }
+
         cleanup {
             script {
                 sh "docker rmi ${apiImageName}:${shortCommit} || true"
