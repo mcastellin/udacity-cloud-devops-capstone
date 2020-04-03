@@ -4,6 +4,29 @@
   hosts: all
   tasks:
 
+    - name: Add an apt signing key for Kubernetes
+      become: yes
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+
+    - name: Adding apt repository for Kubernetes
+      become: yes
+      apt_repository:
+        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+        filename: kubernetes.list
+
+    - name: Install Kubernetes binaries
+      become: yes
+      apt: 
+        name: "{{ packages }}"
+        state: present
+        update_cache: yes
+      vars:
+        packages:
+          - kubectl
+
     - name: install Hadolint
       become: yes
       get_url:
@@ -27,6 +50,7 @@
         - blueocean
         - pipeline-aws
         - role-strategy
+        - kubernetes-cli
 
     - name: restart Jenkins after plugin installation
       become: yes

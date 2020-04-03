@@ -30,7 +30,15 @@ The API interface will be browsable with swagger.
 ## TODOs
 - [x] Create Ansible playbook to install Jenkins into an ubuntu Linux machine
 - [x] Create cloudformation script to initialise all Amazon resources to deploy our Kubernetes cluster and Jenkins
-
+- [ ] Add readyness probe in frontend with the /health url
+- [ ] Update instructions to create cluster to include creation of ingress nginx
+- [x] create deployment yaml for api application
+- [ ] create service yaml 
+- [ ] create helm chart to deploy application in blue-green environment 
+- [ ] update ansible script to install kubernets tools like helm kubectl
+- [ ] add smoke test script to validate deployment before switching service
+- [ ] enable prometheus monitoring, should collect metrics of api pods
+- [ ] configure autoscaling group based on prometheus monitoring for throughput
 
 # Requirements Installation
 
