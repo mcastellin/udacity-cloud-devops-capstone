@@ -60,7 +60,7 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://registry-1.docker.io/', dockerCredentialsId) {
-                        apiImage.push('latest')
+                        apiImage.push()
                     }
                 }
             }
@@ -88,7 +88,7 @@ pipeline {
 
                             echo "Next release is ${nextCandidate}"
 
-                            sh "kubectl apply -f k8s/${nextCandidate}-deployment.yaml"
+                            sh "tagid=${shortCommit} envsubst < k8s/${nextCandidate}-deployment.yaml | kubectl apply -f -"
 
                             def status = null
                             def remaining = 5
@@ -155,7 +155,11 @@ pipeline {
         }
 
         success {
-            echo "tag the image as latest"
+            script {
+                docker.withRegistry('https://registry-1.docker.io/', dockerCredentialsId) {
+                    apiImage.push('latest')
+                }
+            }
         }
 
         cleanup {
