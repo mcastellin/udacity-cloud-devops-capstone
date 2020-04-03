@@ -2,6 +2,7 @@ pipeline {
     agent any
     environment {
         shortCommit = env.GIT_COMMIT.take(7)
+        isRelease = false
         apiImage = null
         apiImageName = 'mcastellin/udacity-capstone-api'
         dockerCredentialsId = 'jenkins_capstone-dockerhub'
@@ -70,6 +71,7 @@ pipeline {
             when { branch "master" }
             steps {
                 script {
+                    isRelease = true // flag that we are performing a release for post handling.
                     withCredentials([string(credentialsId: k8sAPIServerId, variable: 'k8sAPIServerVar'),
                     string(credentialsId: publicDNSNameCredentialsId, variable: 'publicDNSNameVar')]) {
                         // Storing variables at a global level
@@ -156,8 +158,10 @@ pipeline {
 
         success {
             script {
-                docker.withRegistry('https://registry-1.docker.io/', dockerCredentialsId) {
-                    apiImage.push('latest')
+                if(isRelease) {
+                    docker.withRegistry('https://registry-1.docker.io/', dockerCredentialsId) {
+                        apiImage.push('latest')
+                    }
                 }
             }
         }

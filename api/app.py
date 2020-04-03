@@ -9,8 +9,7 @@ LOG.setLevel(logging.INFO)
 
 @app.route("/")
 def home():
-    html = "<h3>Auto scaling application</h3>"
-    LOG.debug("rendering homepage...")
+    html = "<h3>Auto scaling application test</h3>"
     return html.format(format)
 
 
