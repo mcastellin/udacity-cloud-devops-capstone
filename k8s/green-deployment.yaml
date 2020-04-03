@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: green-capstone-api
+  labels:
+    app: capstone-api
+    release: green
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: capstone-api
+      release: green
+  template:
+    metadata:
+      labels:
+        app: capstone-api
+        release: green
+    spec:
+      containers:
+      - name: capstone-api
+        image: mcastellin/udacity-capstone-api:latest
+        ports:
+        - containerPort: 80
