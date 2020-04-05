@@ -39,6 +39,17 @@
         path: /bin/hadolint
         state: touch
         mode: u=rwx,g=rx,o=rx
+
+    - name: Install essentials packages
+      become: yes
+      apt: 
+        name: "{{ packages }}"
+        state: present
+        update_cache: yes
+      vars:
+        packages:
+          - tidy
+          - build-essential
         
     - name: install Jenkins plugins
       jenkins_plugin:
