@@ -8,10 +8,18 @@ install:
 		pip install --upgrade pip &&\
 		pip install -r api/requirements.txt
 
-lint:
+lint-python:
 	# Run linting on all python files
 	@. ~/.capstone/bin/activate &&\
 		pylint --disable=R,C api/*.py
+
+lint-docker:
+	# Lint Dockerfiles
+	@hadolint **/Dockerfile
+
+lint-html: 
+	# Lint HTML files
+	@find . -name '*.html' -exec tidy -q -e {} +
 
 test:
 	# Testing python application
@@ -22,5 +30,7 @@ run-dev:
 	# Useful for development
 	@. ~/.capstone/bin/activate &&\
 		python api/app.py
+
+lint: lint-python lint-docker lint-html
 
 all: install lint

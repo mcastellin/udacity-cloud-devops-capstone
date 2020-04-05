@@ -15,7 +15,7 @@ pipeline {
         k8sAPIServer = null
     }
     stages {
-        stage('Application Lint and Test') {
+        stage('Application Lint & Test') {
             agent {
                 docker { 
                     image 'python:3.7-stretch' 
@@ -24,14 +24,15 @@ pipeline {
             }
             steps {
                 sh 'make setup install'
-                sh 'make lint'
+                sh 'make lint-python'
                 sh 'make test'
             }
         }
 
-        stage('Docker Lint') {
+        stage('Docker & HTML Lint') {
             steps {
-                sh 'hadolint **/Dockerfile'
+                sh 'make lint-docker'
+                sh 'make lint-html'
             }
         }
 
@@ -149,7 +150,7 @@ pipeline {
                     /*
                         If a current release candidate has been identified, rolling back the published release to the existing candidate.
                     */
-                    if(candidate != null) {
+                    if(candidate == "blue" || candidate == "green") {
                         sh "kubectl set selector service/capstone-api-svc release=${candidate},app=capstone-api -n default" 
                     }
                 }
