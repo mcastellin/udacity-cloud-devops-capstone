@@ -22,14 +22,17 @@ and a deployment is attempted:
 
 
 ## TODOs
+- [ ] reconfigure Jenkins to use environment variables instead of secrets for non-sensitive data
+- [ ] deploying the cluster with kops is not acceptable. Need to configure my own cluster with cloudformation
+- [ ] run container as non root user
+- [ ] enable prometheus monitoring, should collect metrics of api pods
+- [ ] deploy grafana dashboard
+- [ ] configure autoscaling group based on prometheus monitoring for throughput
 - [ ] Add readyness probe in frontend with the /health url
 - [ ] Update instructions to create cluster to include creation of ingress nginx
 - [ ] add smoke test script to validate deployment before switching service
-- [ ] enable prometheus monitoring, should collect metrics of api pods
-- [ ] configure autoscaling group based on prometheus monitoring for throughput
 - [ ] for security configure an account with programmatic access to manage AWS resources 
 - [ ] security scan for the container? 
-- [ ] run container as non root user
 - [ ] read this page https://kubernetes.io/docs/concepts/security/overview/
 - [ ] prometheus alerting can send webhooks too. can we use it to scale something? 
 - [ ] write smoke tests
