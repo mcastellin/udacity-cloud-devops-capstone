@@ -22,8 +22,8 @@ and a deployment is attempted:
 
 
 ## TODOs
-- [ ] reconfigure Jenkins to use environment variables instead of secrets for non-sensitive data
-- [ ] deploying the cluster with kops is not acceptable. Need to configure my own cluster with cloudformation
+- [x] reconfigure Jenkins to use environment variables instead of secrets for non-sensitive data
+- [x] deploying the cluster with kops is not acceptable. Need to configure my own cluster with cloudformation
 - [ ] run container as non root user
 - [ ] enable prometheus monitoring, should collect metrics of api pods
 - [ ] deploy grafana dashboard
@@ -32,7 +32,8 @@ and a deployment is attempted:
 - [ ] Update instructions to create cluster to include creation of ingress nginx
 - [ ] add smoke test script to validate deployment before switching service
 - [ ] for security configure an account with programmatic access to manage AWS resources 
-- [ ] security scan for the container? 
+- [x] security scan for the container? 
+- [ ] security scan is currently ignored. Can we fix critical issues? 
 - [ ] read this page https://kubernetes.io/docs/concepts/security/overview/
 - [ ] prometheus alerting can send webhooks too. can we use it to scale something? 
 - [ ] write smoke tests
@@ -50,7 +51,6 @@ covering different AZs (Availability Zones) in the AWS VPC.
 
 TODO: 
 - [ ] update cluster to run with three nodes when all is ready
-- [ ] figure out how I can provide the VPC and subnets to Kops to host in my own network infrastructure
 
 ### Scalability
 
@@ -91,7 +91,8 @@ You can deploy a Jenkins CI server on AWS with the cloudformation deployment scr
 
 ```
 cd cloudformation/
-./deploy_stack.sh jenkins jenkins-w-vpc.yaml jenkins-params.json
+./deploy_stack.sh infrastructure infrastructure.yaml
+./deploy_stack.sh jenkins jenkins-ec2-pub1.yaml
 ```
 
 Once the script is successful you can check in AWS Cloudformation console the Outpus section of the stack. There you can find some useful links to:
@@ -128,26 +129,26 @@ From Jenkins BlueOcean follow these steps to configure a new multi-branch pipeli
 
 - navigate the *Settings* menu for your GitHub repository
 - under *Webhooks* select *Add webhook*
-- specify your Jenkins server URL like for instance `http://54.189.23.46:8080/github-webhook/`
+- specify your Jenkins server URL like, for instance `http://54.189.23.46:8080/github-webhook/`
 - specify a content-type and secret (optional)
 - select the *Just the push event* and create the webhook
 
 
 ## Setup the Kubernetes cluster
 
-In order to run the pipeline we need a working Kubernetes cluster. In the `kops/` directory a create and update scripts are provided. 
-To install a new cluster simply run
+In order to run the pipeline we need a working Kubernetes cluster. The `cloudformation/` directory contains the cloudformation files and
+utility scripts to take care of the cluster creation in AWS EKS.
+To install a new cluster run the following: 
 ```
-cd kops/
-aws s3api create-bucket \
-    --bucket mcastellin-capstone.k8s.local-state-store \
-    --region us-west-2 \
-    --create-bucket-configuration LocationConstraint=us-west-2
-
+cd cloudformation/
 ./create_cluster.sh
 ```
 
-Here is explained what heppens:
-- first we create a new bucket in aws for kops to store our cluster state. This is required by kops.
-- the `create_cluster.sh` will create a new Kubernetes cluster in EC2 using the configuration stored in `kops/mcastellin-capstone.k8s.local.yaml` file
-- the script will output some useful values you need to use to setup your Jenkins instance and access your cluster
+The setup script will deploy a cloudformation stack on top of the network infrastructure created before. 
+- A EKS Control Panel
+- EKS NodeGroups to create worker nodes
+
+Once the stack creation is completed, the cluster creation script will also
+- Create a new Kubernetes service account `jenkins-capstone` for Jenkins to perform releases
+- Install `nginx-ingress` controller
+- Fetch and print Kubernetes console API url and the cluster public DNS name
