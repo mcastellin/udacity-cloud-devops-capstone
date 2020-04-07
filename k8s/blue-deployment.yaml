@@ -21,4 +21,4 @@ spec:
       - name: capstone-api
         image: mcastellin/udacity-capstone-api:${tagid}
         ports:
-        - containerPort: 80
+        - containerPort: 8080
