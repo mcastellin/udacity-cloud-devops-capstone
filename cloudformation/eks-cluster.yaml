@@ -1,0 +1,105 @@
+Description: >
+    Manuel Castellin <manuel@castellinconsulting.com> / Udacity DevOps Capstone Project
+    Creates an EKS Kubernetes console and worker nodes
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resources
+    Type: String
+    Default: capstone
+    
+  KeyPairName:
+    Description: The name of the key pair used to access resources via SSH
+    Type: String
+    Default: pipeline
+
+Resources:
+ 
+  EKSClusterInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - eks.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      RoleName: !Join [ "-", [ !Ref 'AWS::StackName', "EKS-Cluster-Role" ] ]
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+        - arn:aws:iam::aws:policy/AmazonEKSServicePolicy
+        - arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess
+
+  ControlPlaneSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: The security group for the EKS control plane
+      GroupName: !Join ['', [!Ref "AWS::StackName", "-eks-sg"]]
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+        
+  EKSCluster:
+    Type: AWS::EKS::Cluster
+    Properties:
+      Name: !Sub "${EnvironmentName}"
+      ResourcesVpcConfig:
+        SecurityGroupIds:
+          - !Ref ControlPlaneSecGroup
+        SubnetIds:
+          Fn::Split:
+            - ","
+            - Fn::ImportValue:
+                Fn::Sub: "${EnvironmentName}-PUB-NETS"
+      RoleArn: !GetAtt EKSClusterInstanceRole.Arn
+      Version: 1.15
+
+  NodeInstanceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: /
+      RoleName: !Join [ "-", [ !Ref 'AWS::StackName', "EKS-Instance-Role" ] ]
+      ManagedPolicyArns:
+        - !Sub "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+        - !Sub "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+        - !Sub "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+
+  EKSNodegroup:
+    DependsOn: EKSCluster
+    Type: AWS::EKS::Nodegroup
+    Properties:
+      ClusterName: !Sub "${EnvironmentName}"
+      NodeRole: !GetAtt NodeInstanceRole.Arn
+      AmiType: AL2_x86_64
+      DiskSize: 20
+      InstanceTypes:
+        - t3.small
+      ScalingConfig:
+        MinSize: 1
+        DesiredSize: 1
+        MaxSize: 1
+      Subnets:
+        Fn::Split:
+          - ','
+          - Fn::ImportValue: !Sub "${EnvironmentName}-PUB-NETS"
+
+Outputs:
+  APIEndpoint:
+    Description: The Kubernetes control panel API endpoint
+    Value: !GetAtt EKSCluster.Endpoint
+    Export:
+      Name: !Sub "${EnvironmentName}-EKS-Endpoint"
+
