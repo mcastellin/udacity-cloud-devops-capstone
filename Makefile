@@ -19,7 +19,7 @@ lint-docker:
 
 lint-html: 
 	# Lint HTML files
-	@find . -name '*.html' -exec tidy -q -e {} +
+	@find api/ -name '*.html' -exec tidy -q -e {} +
 
 test:
 	# Testing python application

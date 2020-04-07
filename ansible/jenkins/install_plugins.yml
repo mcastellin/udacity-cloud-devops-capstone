@@ -64,6 +64,7 @@
         - pipeline-aws
         - role-strategy
         - kubernetes-cli
+        - aqua-microscanner
 
     - name: restart Jenkins after plugin installation
       become: yes
