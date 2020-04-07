@@ -41,6 +41,14 @@ pipeline {
             }
         }
 
+        stage('Container security scan') {
+            steps {
+                script {
+                    aquaMicroscanner imageName: "${apiImageName}:${shortCommit}", notCompliesCmd: 'exit 1', onDisallowed: 'ignore'
+                } 
+            }
+        }
+
         stage('Integration testing') {
             when { branch "master" }
             steps {
