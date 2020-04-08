@@ -24,7 +24,7 @@ and a deployment is attempted:
 ## TODOs
 - [x] reconfigure Jenkins to use environment variables instead of secrets for non-sensitive data
 - [x] deploying the cluster with kops is not acceptable. Need to configure my own cluster with cloudformation
-- [ ] run container as non root user
+- [x] run container as non root user
 - [ ] enable prometheus monitoring, should collect metrics of api pods
 - [ ] deploy grafana dashboard
 - [ ] configure autoscaling group based on prometheus monitoring for throughput

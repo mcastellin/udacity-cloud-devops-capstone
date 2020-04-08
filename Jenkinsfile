@@ -54,7 +54,7 @@ pipeline {
             steps {
                 script {
                     def port = 8888
-                    apiImage.withRun("-p ${port}:80") {
+                    apiImage.withRun("-p ${port}:8080") {
                         sleep 10
                         sh "curl -v http://localhost:${port}/"
                     }
