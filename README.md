@@ -28,7 +28,7 @@ and a deployment is attempted:
 - [ ] enable prometheus monitoring, should collect metrics of api pods
 - [ ] deploy grafana dashboard
 - [ ] configure autoscaling group based on prometheus monitoring for throughput
-- [ ] Add readyness probe in frontend with the /health url
+- [x] Add readyness probe in frontend with the /health url
 - [ ] Update instructions to create cluster to include creation of ingress nginx
 - [ ] add smoke test script to validate deployment before switching service
 - [ ] for security configure an account with programmatic access to manage AWS resources 
