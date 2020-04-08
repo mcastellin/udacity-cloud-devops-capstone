@@ -22,3 +22,11 @@ spec:
         image: mcastellin/udacity-capstone-api:${tagid}
         ports:
         - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 3
+          successThreshold: 2
