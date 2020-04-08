@@ -158,7 +158,7 @@ pipeline {
 
         success {
             script {
-                if(isRelease) {
+                if(isRelease == true) {
                     docker.withRegistry('https://registry-1.docker.io/', dockerCredentialsId) {
                         apiImage.push('latest')
                     }
