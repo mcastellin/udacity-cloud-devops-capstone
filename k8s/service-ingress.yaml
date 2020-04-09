@@ -10,6 +10,7 @@ spec:
     release: blue
   ports:
   - protocol: TCP
+    name: http
     port: 80
     targetPort: 8080
 
@@ -25,6 +26,7 @@ spec:
     release: green
   ports:
   - protocol: TCP
+    name: http
     port: 80
     targetPort: 8080
 

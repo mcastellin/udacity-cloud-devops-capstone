@@ -132,7 +132,10 @@ pipeline {
                         serverUrl: env.EKS_API_URL
                     ]) {
                         sh "kubectl set selector service/capstone-api-svc release=${nextCandidate},app=capstone-api -n default" 
-                        sh "kubectl delete deployment ${candidate}-capstone-api -n default || true"
+                        sh """
+                            kubectl delete deployment ${candidate}-capstone-api -n default || true
+                            kubectl delete hpa ${candidate}-capstone-api -n default || true
+                        """
                     }
                 }
             }
