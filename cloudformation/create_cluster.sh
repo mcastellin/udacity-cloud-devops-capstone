@@ -10,12 +10,26 @@ echo "Backing up kubect config and replacing with new cluster configuration"
 mv ~/.kube/config ~/.kube/_config
 aws eks update-kubeconfig --name $clusterName
 
+echo "Installing metrics-server"
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
+
 echo "Installing nginx-ingress controller charts"
 kubectl create ns kube-ingress
 helm repo update
-helm install nginx-ingress stable/nginx-ingress --namespace kube-ingress
+helm install nginx-ingress stable/nginx-ingress \
+    --namespace kube-ingress
+
+echo "Installing prometheus charts"
+helm install prometheus stable/prometheus \
+    --set alertmanager.persistentVolume.storageClass="gp2",server.persistentVolume.storageClass="gp2"
+
+helm install prometheus-adapter stable/prometheus-adapter \
+    -f prometheus-adapter-values.yaml
 
 echo "Charts installed."
+
+echo "Installing application ingress and services"
+kubectl apply -f ../k8s/service-ingress.yaml
 
 echo "Creating service account for Jenkins..."
 kubectl -n default create serviceaccount jenkins-capstone

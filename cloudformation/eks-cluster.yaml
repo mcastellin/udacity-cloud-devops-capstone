@@ -89,8 +89,8 @@ Resources:
         - t3.small
       ScalingConfig:
         MinSize: 1
-        DesiredSize: 1
-        MaxSize: 1
+        DesiredSize: 3
+        MaxSize: 3
       Subnets:
         Fn::Split:
           - ','

@@ -16,6 +16,10 @@ spec:
       labels:
         app: capstone-api
         release: green
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8080"
     spec:
       containers:
       - name: capstone-api
@@ -29,3 +33,28 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 5
           failureThreshold: 3
+
+---
+
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: green-capstone-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: green-capstone-api
+  # autoscale between 1 and 10 replicas
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  # use a "Pods" metric, which takes the average of the
+  # given metric across all pods controlled by the autoscaling target
+  - type: Pods
+    pods:
+      # use the metric that you used above: pods/app_request_count_total
+      metricName: app_request_count_total
+      # target 2 requests per second
+      targetAverageValue: 2
+

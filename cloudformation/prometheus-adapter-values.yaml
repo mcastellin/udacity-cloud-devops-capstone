@@ -1,0 +1,15 @@
+prometheus:
+  url: "http://prometheus-server.default.svc"
+  port: 80
+
+rules:
+  custom:
+  - seriesQuery: '{__name__=~"^app_request_count_total$"}'
+    resources:
+      overrides:
+        kubernetes_namespace: {resource: "namespace"}
+        kubernetes_pod_name: {resource: "pod"}
+    name:
+      matches: ""
+      as: "app_request_count_total"
+    metricsQuery: sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)
