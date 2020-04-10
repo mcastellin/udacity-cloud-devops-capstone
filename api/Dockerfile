@@ -1,6 +1,8 @@
 FROM python:3.7-slim
 LABEL maintainer="manuel@castellinconsulting.com"
 
+ENV RELEASE="undefined"
+
 # Creating non-root user for application to run
 RUN mkdir -p /home/capstone &&\
         groupadd -r capstone -g 999 &&\
