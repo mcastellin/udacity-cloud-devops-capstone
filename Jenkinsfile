@@ -50,13 +50,15 @@ pipeline {
         }
 
         stage('Integration testing') {
-            when { branch "master" }
             steps {
                 script {
                     def port = 8888
                     apiImage.withRun("-p ${port}:8080") {
                         sleep 10
-                        sh "curl -v http://localhost:${port}/"
+                        sh """
+                        curl -v http://localhost:${port}/
+                        curl -v -XPOST -H 'Content-Type: application/json' -d '{"text": "tomorrow"}' http://localhost:${port}/translate
+                        """
                     }
                 }
             }
@@ -93,36 +95,27 @@ pipeline {
 
                         sh "tagid=${shortCommit} envsubst < k8s/${nextCandidate}-deployment.yaml | kubectl apply -f -"
 
-                        def status = null
-                        def remaining = 5
-                        while(remaining > 0 && status != "200") {
-                           sleep 10
-                           status = sh(returnStdout: true,
-                                script: "curl -w \"%{http_code}\" -s -o /dev/null ${env.EKS_PUBLIC_DNS}/${nextCandidate}/api")
-                                .trim()
+                        echo "waiting for pods to be ready..."
+
+                        def attempts = 0
+                        def status = 'nok'
+                        while(attempts < 10 && status != 'ok') {
+                            try {
+                                sh "kubectl get pods -l app=capstone-api -l release=${nextCandidate} -o jsonpath='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}' | grep 'Ready=True'"
+                                status = 'ok'
+                            } catch (Exception e) {
+                                attempts++
+                                sleep 5
+                            }
                         }
-                        if(status != "200") {
-                            error("Deployment failed to respond with successful code 200, got $status instead.")
+                        if(status != 'ok') {
+                            error("Deployment failed liveness check after ${attempts} attempts. Rolling back.")
                         }
                     }
                 }
             }
         }
         
-        stage('Smoke tests') {
-            when { branch "master" }
-            steps {
-                script {
-                    withKubeConfig([
-                        credentialsId: kubectlCredentialsId,
-                        serverUrl: env.EKS_API_URL
-                    ]) {
-                        echo "TODO: smoke testing"
-                    }
-                }
-            }
-        }
-
         stage('Promote release') {
             when { branch "master" }
             steps {
@@ -132,12 +125,22 @@ pipeline {
                         serverUrl: env.EKS_API_URL
                     ]) {
                         sh "kubectl set selector service/capstone-api-svc release=${nextCandidate},app=capstone-api -n default" 
-                        sh """
-                            kubectl delete deployment ${candidate}-capstone-api -n default || true
-                            kubectl delete hpa ${candidate}-capstone-api -n default || true
-                        """
                     }
                 }
+            }
+        }
+
+        stage('Smoke tests') {
+            when { branch "master" }
+            agent {
+                docker { 
+                    image 'python:3.7-stretch' 
+                    args '--user root'
+                }
+            }
+            steps {
+                sh 'pip install locust'
+                sh "locust -f locustfile.py --no-web -c 3 -r 1 --run-time 20s --host '${env.EKS_PUBLIC_DNS}'"
             }
         }
     }
@@ -164,6 +167,17 @@ pipeline {
                 if(isRelease == true) {
                     docker.withRegistry('https://registry-1.docker.io/', dockerCredentialsId) {
                         apiImage.push('latest')
+                    }
+
+                    withKubeConfig([
+                        credentialsId: kubectlCredentialsId,
+                        serverUrl: env.EKS_API_URL
+                    ]) {
+                        /* Deleting old release after successful deployment */
+                        sh """
+                            kubectl delete deployment ${candidate}-capstone-api -n default || true
+                            kubectl delete hpa ${candidate}-capstone-api -n default || true
+                        """
                     }
                 }
             }

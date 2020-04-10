@@ -23,7 +23,8 @@ lint-html:
 
 test:
 	# Testing python application
-	echo "good"
+	@. ~/.capstone/bin/activate &&\
+		python -m pytest -vv --cov=api api/*_test.py
 
 run-dev:
 	# Runs the python api main file

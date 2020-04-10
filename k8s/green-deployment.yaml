@@ -24,6 +24,9 @@ spec:
       containers:
       - name: capstone-api
         image: mcastellin/udacity-capstone-api:${tagid}
+        env:
+          - name: RELEASE
+            value: "green"
         ports:
         - containerPort: 8080
         livenessProbe:
