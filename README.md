@@ -31,7 +31,20 @@ The application is a simple API written in Python that translates date reference
 a exact date-time values. A user can make a POST request to the `/translate` endpoint and request to translate, say 
 `in three days`, and receive in response a date time value for that expression
 
-![Request example](img/request_example.png)
+```
+Request: POST http://{{application_url}}/translate:
+{
+	"text": "in three days"
+}
+```
+
+```
+Response body:
+{
+    "result": "2020-04-13 12:39"
+}
+```
+
 
 ### High Availability
 
@@ -67,6 +80,7 @@ the managed resources without using root accounts:
 
 - Install Jenkins instance with Cloudformation
 - Install additional Jenkins plugins with ansible
+- Create Kubernetes cluster in EKS
 
 ## Prepare Jenkins server instance
 
@@ -134,3 +148,5 @@ Once the stack creation is completed, the cluster creation script will also
 - Fetch and print Kubernetes console API url and the cluster public DNS name
 
 
+# License
+This project is released under the [MIT License](LICENSE.md)
