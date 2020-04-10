@@ -62,7 +62,7 @@ The Kubernetes cluster is configured with a Prometheus server and the custom met
 by querying the `/metrics` endpoint. Kubernetes will query the `pods/app_request_count_total` from the custom metric API and control the number of
 pod replicas so that every pod will manage the target 2 requests per second.
 
-Below an exampmle of a load run with Locust
+Below an example of a load run with Locust
 
 ![horizontal autoscaling](img/horizontal_autoscaling.png)
 
@@ -79,7 +79,7 @@ the managed resources without using root accounts:
 # The Jenkins Pipeline
 
 The date translation application is deployed by a CI/CD pipeline with Jenkins CI.
-The pipeline is divided in X sections:
+The pipeline is divided in the following sections:
 - Static code checks and unit testing
 - Application containerization and security scan
 - Testing
@@ -90,7 +90,7 @@ The pipeline is divided in X sections:
 ### Static code analysis
 
 The first phase of the pipeline consists in performing a static code analysis for all the project files.
-The validation is performed for all commits push performed in this GitHub repository. All static analysis steps
+The validation is performed for all commits push into this GitHub repository. All static analysis steps
 of the pipeline must pass or otherwise the build fails. See example:
 
 ![static analysis](img/static_analysis.png)
@@ -108,15 +108,15 @@ the generated docker image is also pushed into the DockerHub registry [mcastelli
 
 ![docker build](img/docker_build.png)
 
-As part of the docker build, a security scan is performed on the image just generated with *Aqua Microscanner*.
+As part of the docker build, a security scan is performed on the image just generated using *Aqua Microscanner*.
 Below an example of the scanner detecting security issues for the docker image
 
 ![security scan](img/security_scan.png)
 
 ### Integration testing
 
-A simple integration tests is performed against a running container to verify the dockerized application can run and respond to simple requests.
-The application is very simple so this validation is performed with a few simple `curl` commands
+A simple integration test is performed against a running container to verify the dockerized application can run and respond to simple requests.
+The application is very simple so this validation is performed with a few `curl` commands
 
 ### Application deployment
 
@@ -151,7 +151,7 @@ livenessProbe:
 ### Post release validation
 
 A post-reelase validation step (smoke testing) is performed right after a successful deployment. This steps uses *Locust* to validate the application
-is responsive and can handle a certain amount requests without failure.
+is responsive and can handle a certain amount of requests without failure.
 
 ![smoke testing](img/post_release.png)
 
