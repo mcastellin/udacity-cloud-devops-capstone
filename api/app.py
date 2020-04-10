@@ -16,6 +16,7 @@ RELEASE = os.getenv("RELEASE", "undefined")
 
 DEFAULT_FORMAT = "%Y-%m-%d %H:%M"
 
+
 @app.route("/")
 def index():
     """

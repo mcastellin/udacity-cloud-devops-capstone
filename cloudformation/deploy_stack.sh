@@ -20,7 +20,7 @@ function stack_op() {
 }
 
 # Deploys a stack to AWS
-# params: stackName templateFile paramsFile
+# params: stackName templateFile 
 function deploy_stack() {
     operation=$(stack_op $1)
 
