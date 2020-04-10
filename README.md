@@ -76,6 +76,91 @@ the managed resources without using root accounts:
 - access to EC2 instances is limited using *AWS SecurityGroups*
 
 
+# The Jenkins Pipeline
+
+The date translation application is deployed by a CI/CD pipeline with Jenkins CI.
+The pipeline is divided in X sections:
+- Static code checks and unit testing
+- Application containerization and security scan
+- Testing
+- Blue-Green deployment in Kubernetes
+- Post-release validation
+- Promote release or rollback
+
+### Static code analysis
+
+The first phase of the pipeline consists in performing a static code analysis for all the project files.
+The validation is performed for all commits push performed in this GitHub repository. All static analysis steps
+of the pipeline must pass or otherwise the build fails. See example:
+
+![static analysis](img/static_analysis.png)
+
+Here is a list of the validations performed by the build:
+- Python application linting (`pylint`)
+- HTML linting with `tidy`
+- Dockerfile linting with `hadolint`
+- Python unit testing (`pytest`)
+
+### Application containerization and security scanning
+
+After the linting phase, the application container is created form the `api/Dockerfile`. If the build branch is `master`
+the generated docker image is also pushed into the DockerHub registry [mcastellin/udacity-capstone-api](https://hub.docker.com/repository/docker/mcastellin/udacity-capstone-api)
+
+![docker build](img/docker_build.png)
+
+As part of the docker build, a security scan is performed on the image just generated with *Aqua Microscanner*.
+Below an example of the scanner detecting security issues for the docker image
+
+![security scan](img/security_scan.png)
+
+### Integration testing
+
+A simple integration tests is performed against a running container to verify the dockerized application can run and respond to simple requests.
+The application is very simple so this validation is performed with a few simple `curl` commands
+
+### Application deployment
+
+The application is deployed into a Kubernetes cluster hosted with Amazon EKS. The deployment is performed in a **Blue-Green** fashion. 
+While the pipeline is running, two deployment of the api application exists in the cluster. Once the new application version is deployed and
+the validation is successful, we use Kubernetes pod labels to expose it:
+
+```
+kubectl set selector service/capstone-api-svc release=${nextCandidate},app=capstone-api -n default
+```
+
+The command above tells the `capstone-api-svc` service to route the incoming traffic to the pods of the new release candidate (*blue* or *green*)
+
+> How does the pipeline knows the new api is ready to serve requests? 
+> 
+> The Kubernetes deployment runs liveness probes for all pods to check if the container is responsive before setting the pod status to `Ready`.
+> The date translation api exposes a `/health` endpoint that responds with a HTTP 200 when the application is live.
+
+```
+# Application liveness probe configured for all pods
+# it runs an HTTP get every 5 secods to check if the container
+# is live and ready to serve requests
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  failureThreshold: 3
+```
+
+### Post release validation
+
+A post-reelase validation step (smoke testing) is performed right after a successful deployment. This steps uses *Locust* to validate the application
+is responsive and can handle a certain amount requests without failure.
+
+![smoke testing](img/post_release.png)
+
+If a deployment testing is unsuccessful, the pipeline will immediately re-route the traffic back to the previous deployment, which is still available
+in the Kubernetes cluster.
+
+![deployment rollback](img/deployment_rollback.png)
+
+
 # Project Requirements and Preparation
 
 - Install Jenkins instance with Cloudformation
@@ -146,91 +231,6 @@ Once the stack creation is completed, the cluster creation script will also
 - Deploy the our application service ingress
 - Create the Kubernetes service account for Jenkins
 - Fetch and print Kubernetes console API url and the cluster public DNS name
-
-
-# The Jenkins Pipeline
-
-The date translation application is deployed by a CI/CD pipeline with Jenkins CI.
-The pipeline is divided in X sections:
-- Static code checks and unit testing
-- Application containerization and security scan
-- Testing
-- Blue-Green deployment in Kubernetes
-- Post-release validation
-- Promote release or rollback
-
-### Static code analysis
-
-The first phase of the pipeline consists in performing a static code analysis for all the project files.
-The validation is performed for all commits push performed in this GitHub repository. All static analysis steps
-of the pipeline must pass or otherwise the build fails. See example:
-
-![static analysis](img/static_analysis.png)
-
-Here is a list of the validations performed by the build:
-- Python application linting (`pylint`)
-- HTML linting with `tidy`
-- Dockerfile linting with `hadolint`
-- Python unit testing (`pytest`)
-
-### Application containerization and security scanning
-
-After the linting phase, the application container is created form the `api/Dockerfile`. If the build branch is `master`
-the generated docker image is also pushed into the DockerHub registry [mcastellin/udacity-capstone-api](https://hub.docker.com/repository/docker/mcastellin/udacity-capstone-api)
-
-![docker build](img/docker_build.png)
-
-As part of the docker build, a security scan is performed on the image just generated with *Aqua Microscanner*.
-Below an example of the scanner detecting security issues for the docker image
-
-![security scan](img/security_scan.png)
-
-### Integration testing
-
-A simple integration tests is performed against a running container to verify the dockerized application can run and respond to simple requests.
-The application is very simple so this validation is performed with a few simple `curl` commands
-
-### Application deployment
-
-The application is deployed into a Kubernetes cluster hosted with Amazon EKS. The deployment is performed in a Blue-Green fashion. 
-While the pipeline is running, two deployment of the api application exists. Once the new application version is deployed and
-the validation is successful, we use Kubernetes pod labels to expose it:
-
-```
-kubectl set selector service/capstone-api-svc release=${nextCandidate},app=capstone-api -n default
-```
-
-The command above tells the `capstone-api-svc` service to route the incoming traffic to the pods of the new release candidate (*blue* or *green*)
-
-> How does the pipeline knows the new api is ready to serve requests? 
-> 
-> The Kubernetes deployment runs liveness probes for all pods to check if the container is responsive before setting pod status to `Ready`.
-> The date translation api exposes a `/health` endpoint that responds with a HTTP 200 when the application is live.
-
-```
-# Application liveness probe configured for all pods
-# it runs an HTTP get every 5 secods to check if the container
-# is live and ready to serve requests
-livenessProbe:
-  httpGet:
-    path: /health
-    port: 8080
-  initialDelaySeconds: 10
-  periodSeconds: 5
-  failureThreshold: 3
-```
-
-### Post release validation
-
-A post-reelase validation step (smoke testing) is performed right after a successful deployment. This steps uses *Locust* to validate the application
-is responsive and can handle a certain amount requests without failure.
-
-![smoke testing](img/post_release.png)
-
-If a deployment testing is unsuccessful, the pipeline will immediately re-route the traffic back to the previous deployment, which is still available
-in the Kubernetes cluster.
-
-![deployment rollback](img/deployment_rollback.png)
 
 
 # License

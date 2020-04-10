@@ -8,7 +8,7 @@ def index(l):
 
 
 def translation(l):
-    l.client.post("/translat", json=SAMPLE_REQUEST)
+    l.client.post("/translate", json=SAMPLE_REQUEST)
 
 
 class DateTranslationLoadTesting(TaskSet):
